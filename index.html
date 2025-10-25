@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trading Journal Pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/framer-motion/dist/framer-motion.umd.js"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans">
+  <div class="container mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-4">Trading Journal Pro</h1>
+    <form id="tradeForm" class="grid grid-cols-2 gap-4 bg-gray-800 p-4 rounded-lg shadow">
+      <input type="date" id="date" class="p-2 rounded bg-gray-700" required />
+      <select id="session" class="p-2 rounded bg-gray-700">
+        <option>London</option>
+        <option>New York</option>
+        <option>Asia</option>
+      </select>
+      <select id="direction" class="p-2 rounded bg-gray-700">
+        <option>Long</option>
+        <option>Short</option>
+      </select>
+      <input type="number" id="risk" placeholder="Risk ($)" class="p-2 rounded bg-gray-700" required />
+      <input type="number" id="rr" placeholder="R Multiple" step="0.1" class="p-2 rounded bg-gray-700" required />
+      <input type="text" id="tags" placeholder="Tags" class="p-2 rounded bg-gray-700" />
+      <button class="col-span-2 bg-indigo-600 hover:bg-indigo-500 transition rounded-lg p-2">Add Trade</button>
+    </form>
+
+    <h2 class="text-xl font-semibold mt-8 mb-2">Trades</h2>
+    <table class="w-full bg-gray-800 rounded-lg overflow-hidden">
+      <thead class="bg-gray-700">
+        <tr>
+          <th class="p-2">Date</th>
+          <th class="p-2">Session</th>
+          <th class="p-2">Direction</th>
+          <th class="p-2">Risk</th>
+          <th class="p-2">R</th>
+          <th class="p-2">P&L</th>
+          <th class="p-2">Tags</th>
+        </tr>
+      </thead>
+      <tbody id="tradeTable"></tbody>
+    </table>
+
+    <h2 class="text-xl font-semibold mt-8 mb-2">Equity Curve</h2>
+    <canvas id="equityChart" class="bg-gray-800 rounded-lg p-4"></canvas>
+  </div>
+
+  <script>
+    const form = document.getElementById('tradeForm');
+    const table = document.getElementById('tradeTable');
+    const ctx = document.getElementById('equityChart').getContext('2d');
+
+    let trades = JSON.parse(localStorage.getItem('trades') || '[]');
+
+    function renderTrades(){
+      table.innerHTML = '';
+      let equity = 10000;
+      let labels = [];
+      let data = [];
+      trades.forEach(trade => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="p-2">${trade.date}</td>
+          <td class="p-2">${trade.session}</td>
+          <td class="p-2">${trade.direction}</td>
+          <td class="p-2">$${trade.risk}</td>
+          <td class="p-2">${trade.rr}</td>
+          <td class="p-2">$${trade.pnl}</td>
+          <td class="p-2">${trade.tags}</td>
+        `;
+        table.appendChild(row);
+        equity += trade.pnl;
+        labels.push(trade.date);
+        data.push(equity);
+      });
+      drawChart(labels, data);
+    }
+
+    function drawChart(labels, data){
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Equity',
+            data,
+            fill: true,
+            borderColor: 'rgb(99, 102, 241)',
+            backgroundColor: 'rgba(99, 102, 241, 0.3)'
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: false } }
+        }
+      });
+    }
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const trade = {
+        date: document.getElementById('date').value,
+        session: document.getElementById('session').value,
+        direction: document.getElementById('direction').value,
+        risk: parseFloat(document.getElementById('risk').value),
+        rr: parseFloat(document.getElementById('rr').value),
+        pnl: parseFloat(document.getElementById('risk').value) * parseFloat(document.getElementById('rr').value),
+        tags: document.getElementById('tags').value
+      };
+      trades.push(trade);
+      localStorage.setItem('trades', JSON.stringify(trades));
+      renderTrades();
+      form.reset();
+    });
+
+    renderTrades();
+  </script>
+</body>
+</html>
